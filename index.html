@@ -30,7 +30,6 @@
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
-    padding: 0;
     overflow-x: hidden;
   }
 
@@ -114,7 +113,7 @@
     background: var(--border);
   }
 
-  textarea, input {
+  textarea {
     width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -129,12 +128,12 @@
     resize: none;
   }
 
-  textarea:focus, input:focus {
+  textarea:focus {
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
-  textarea::placeholder, input::placeholder { color: var(--text-dim); }
+  textarea::placeholder { color: var(--text-dim); }
 
   .message-input { height: 160px; }
   .context-input { height: 60px; }
@@ -161,13 +160,10 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    text-align: center;
   }
 
   .tone-btn .tone-icon { font-size: 18px; }
-
   .tone-btn:hover { border-color: var(--accent); color: var(--text); }
-
   .tone-btn.active {
     background: var(--accent-dim);
     border-color: var(--accent);
@@ -186,7 +182,6 @@
     padding: 15px;
     border-radius: var(--radius);
     cursor: pointer;
-    letter-spacing: 0.3px;
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -201,7 +196,6 @@
     box-shadow: 0 8px 24px rgba(201,168,76,0.3);
   }
 
-  .generate-btn:active:not(:disabled) { transform: translateY(0); }
   .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .output-box {
@@ -235,8 +229,7 @@
   }
 
   .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--text-dim);
     transition: background 0.3s;
@@ -251,7 +244,6 @@
   .status-dot.done {
     background: var(--green);
     box-shadow: 0 0 6px var(--green);
-    animation: none;
   }
 
   @keyframes pulse {
@@ -283,7 +275,6 @@
     color: var(--text);
     min-height: 140px;
     white-space: pre-wrap;
-    font-family: 'DM Sans', sans-serif;
   }
 
   .output-placeholder { color: var(--text-dim); font-style: italic; font-size: 13px; }
@@ -291,8 +282,7 @@
   .loading-dots { display: flex; gap: 4px; padding: 20px; align-items: center; }
 
   .dot {
-    width: 6px;
-    height: 6px;
+    width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--accent);
     animation: bounce 1.2s infinite;
@@ -318,7 +308,6 @@
   }
 
   .section { margin-bottom: 24px; }
-
   .divider { height: 1px; background: var(--border); margin: 32px 0; }
 
   .char-count {
@@ -360,22 +349,10 @@
   <div class="section">
     <div class="section-label">Reply Tone</div>
     <div class="tone-grid">
-      <button class="tone-btn active" data-tone="Professional">
-        <span class="tone-icon">💼</span>
-        Professional
-      </button>
-      <button class="tone-btn" data-tone="Friendly">
-        <span class="tone-icon">😊</span>
-        Friendly
-      </button>
-      <button class="tone-btn" data-tone="Formal">
-        <span class="tone-icon">🎩</span>
-        Formal
-      </button>
-      <button class="tone-btn" data-tone="Concise">
-        <span class="tone-icon">⚡</span>
-        Concise
-      </button>
+      <button class="tone-btn active" data-tone="Professional"><span class="tone-icon">💼</span>Professional</button>
+      <button class="tone-btn" data-tone="Friendly"><span class="tone-icon">😊</span>Friendly</button>
+      <button class="tone-btn" data-tone="Formal"><span class="tone-icon">🎩</span>Formal</button>
+      <button class="tone-btn" data-tone="Concise"><span class="tone-icon">⚡</span>Concise</button>
     </div>
   </div>
 
@@ -418,11 +395,9 @@
   });
 
   const messageInput = document.getElementById('messageInput');
-  const charCount = document.getElementById('charCount');
   messageInput.addEventListener('input', () => {
     const len = messageInput.value.length;
-    charCount.textContent = `${len} / 2000`;
-    charCount.style.color = len > 1800 ? '#e05c5c' : 'var(--text-dim)';
+    document.getElementById('charCount').textContent = `${len} / 2000`;
   });
 
   document.getElementById('generateBtn').addEventListener('click', generateReply);
@@ -430,43 +405,24 @@
   async function generateReply() {
     const message = messageInput.value.trim();
     if (!message) { showError('Please paste a message to reply to.'); return; }
-    if (message.length > 2000) { showError('Message is too long. Keep it under 2000 characters.'); return; }
+    if (message.length > 2000) { showError('Message too long. Keep it under 2000 characters.'); return; }
 
     const context = document.getElementById('contextInput').value.trim();
     hideError();
     setLoading(true);
 
-    const systemPrompt = `You are a professional business reply writer. Write clear, effective replies on behalf of business owners.
-${context ? `Business context: ${context}` : ''}
-Tone: ${selectedTone}
-- Professional: polished and business-appropriate
-- Friendly: warm, personable, approachable
-- Formal: structured and traditional
-- Concise: brief and to the point
-
-Write ONLY the reply text. No subject line, no labels, no explanation. Just the reply body itself.`;
-
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: `Write a ${selectedTone.toLowerCase()} reply to this message:\n\n${message}` }]
-        })
+        body: JSON.stringify({ message, tone: selectedTone, context })
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || 'API error');
-      }
-
       const data = await response.json();
-      showReply(data.content?.[0]?.text || '');
+      if (!response.ok) throw new Error(data.error || 'Something went wrong');
+      showReply(data.reply);
     } catch (err) {
-      showError('Something went wrong: ' + err.message);
+      showError('Error: ' + err.message);
       setLoading(false, false);
     }
   }
@@ -478,10 +434,10 @@ Write ONLY the reply text. No subject line, no labels, no explanation. Just the 
     btn.disabled = loading;
 
     if (loading) {
-      btn.innerHTML = `<span>Generating...</span>`;
+      btn.innerHTML = '<span>Generating...</span>';
       dot.className = 'status-dot active';
       statusText.textContent = 'Writing reply...';
-      document.getElementById('outputContent').innerHTML = `<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+      document.getElementById('outputContent').innerHTML = '<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
       document.getElementById('outputBox').classList.remove('has-content');
       document.getElementById('copyBtn').style.display = 'none';
     } else {
